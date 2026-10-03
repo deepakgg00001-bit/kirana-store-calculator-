@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#24160d" />
+  <title>Kirana Store Calculation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-deep: #1f130b;
+      --bg-warm: #3d2614;
+      --ink: #342117;
+      --muted: #8c755f;
+      --accent: #b45309;
+      --accent-dark: #873c08;
+      --line: rgba(126, 76, 35, 0.23);
+      --paper: #fbf5ec;
+      --paper-shadow: #ead9c4;
+      --body-size: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    html { font-size: var(--body-size); }
+    body {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 48% -15%, rgba(245, 158, 11, 0.2), transparent 32rem),
+        radial-gradient(circle at 3% 100%, rgba(180, 83, 9, 0.2), transparent 27rem),
+        linear-gradient(135deg, var(--bg-deep), #2a1a0f 48%, var(--bg-warm));
+      font-family: "Plus Jakarta Sans", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+
+    button { font: inherit; }
+    .app-shell {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      overflow: hidden;
+    }
+    .app-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 460px);
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border: 2px solid rgba(166, 111, 61, 0.48);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(255, 250, 242, 0.98), rgba(231, 205, 177, 0.95));
+      box-shadow: 0 28px 68px rgba(8, 4, 2, 0.42), 0 12px 22px rgba(19, 10, 4, 0.3), inset 0 0 0 1px rgba(255,255,255,.76), inset 0 2px 0 #fff;
+    }
+
+    .app-header {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 14px 18px 10px;
+    }
+    .heading-wrap { flex: 1 1 auto; min-width: 0; }
+    h1 {
+      margin: 0;
+      color: #2d1a0f;
+      font-family: Outfit, sans-serif;
+      font-size: 1.65rem;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      line-height: 1.05;
+    }
+    .language-picker {
+      position: relative;
+      display: grid;
+      flex: 0 0 auto;
+      width: 44px;
+      height: 42px;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,.65);
+      border-radius: 13px;
+      color: #fffaf3;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+      box-shadow: 0 3px 0 #6f2f08, 0 5px 9px rgba(84,36,7,.16), inset 1px 1px 0 rgba(255,230,190,.35);
+    }
+    .language-picker svg {
+      position: absolute;
+      top: 50%;
+      left: 6px;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .language-chevron {
+      position: absolute;
+      top: 50%;
+      right: 4px;
+      color: rgba(255,250,243,.9);
+      font-size: .74rem;
+      line-height: 1;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .language-select {
+      position: absolute;
+      z-index: 2;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: inherit;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .language-picker:focus-within { outline: 3px solid rgba(180,83,9,.38); outline-offset: 2px; }
+    .language-picker:active { transform: translateY(1px); }
+
+    .view {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #calculationView {
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(143,91,49,.35) transparent;
+    }
+    .view[hidden] { display: none !important; }
+    .view:not([hidden]) { backface-visibility: hidden; }
+    .view[data-entering="history"]:not([hidden]) { transform-origin: left center; animation: history-flip-in 180ms cubic-bezier(.2,.72,.25,1); }
+    .view[data-entering="calculation"]:not([hidden]) { transform-origin: right center; animation: calculation-flip-in 180ms cubic-bezier(.2,.72,.25,1); }
+    @keyframes history-flip-in {
+      from { opacity: .45; transform: perspective(1000px) rotateY(-28deg) translateX(25px) scale(.98); }
+      to { opacity: 1; transform: perspective(900px) rotateY(0) translateX(0); }
+    }
+    @keyframes calculation-flip-in {
+      from { opacity: .45; transform: perspective(1000px) rotateY(28deg) translateX(-25px) scale(.98); }
+      to { opacity: 1; transform: perspective(900px) rotateY(0) translateX(0); }
+    }
+    .fields {
+      display: grid;
+      flex: 0 0 auto;
+      gap: 10px;
+      padding: 0 14px 12px;
+    }
+    .field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 51px;
+      padding: 5px 10px 5px 12px;
+      border: 1.5px solid rgba(123, 76, 37, .42);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(239,218,194,.54));
+      box-shadow: 0 3px 0 rgba(171, 130, 90, .42), 0 6px 11px rgba(101,56,21,.12), inset 0 1px 0 rgba(255,255,255,.94), inset 0 -2px 4px rgba(105,67,35,.08);
+      transition: border-color 90ms ease, box-shadow 90ms ease, transform 90ms ease;
+    }
+    .field:focus-within, .field:has(.value-button:focus-visible) {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(180,83,9,.12), 0 4px 0 rgba(171, 130, 90, .3), 0 7px 13px rgba(132,60,7,.14), inset 0 1px 0 rgba(255,255,255,.94);
+      transform: translateY(-1px);
+    }
+    .field-copy { display: flex; min-width: 0; align-items: center; }
+    .field-label {
+      display: block;
+      margin: 0 0 1px;
+      color: #684a34;
+      font-family: Outfit, sans-serif;
+      font-size: .7rem;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+    .value-button {
+      min-width: 112px;
+      max-width: 50vw;
+      min-height: 36px;
+      padding: 5px 9px;
+      border: 1px solid rgba(123,76,37,.28);
+      border-radius: 9px;
+      outline: 0;
+      color: #29180d;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,250,243,.72));
+      box-shadow: inset 0 1px 2px rgba(91,55,24,.09), 0 1px 0 rgba(255,255,255,.78);
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: 1.12rem;
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+      touch-action: manipulation;
+      transition: border-color 90ms ease, background 90ms ease, box-shadow 90ms ease;
+    }
+    .value-button:hover { border-color: rgba(180,83,9,.46); }
+    .value-button:active { background: #fffaf2; box-shadow: inset 0 1px 3px rgba(91,55,24,.16); }
+    .value-button.is-empty::before {
+      color: #9b8066;
+      content: attr(data-placeholder);
+      font-family: "Plus Jakarta Sans", sans-serif;
+      font-size: .59rem;
+      font-weight: 600;
+      text-align: right;
+    }
+    .value-button.is-empty { color: rgba(0,0,0,.58); }
+    .value-button:focus-visible { outline: 2px solid rgba(180,83,9,.42); outline-offset: 1px; }
+    .field:has(.value-button.is-calculated) {
+      border-color: rgba(57, 130, 73, .62);
+      background: linear-gradient(145deg, rgba(244,255,245,.92), rgba(222,243,224,.7));
+      box-shadow: 0 3px 0 rgba(89,151,99,.34), 0 5px 12px rgba(44,118,57,.13), inset 0 1px 0 rgba(255,255,255,.96);
+    }
+    .value-button.is-calculated {
+      border-color: rgba(53,132,69,.68);
+      color: #185b2a;
+      background: linear-gradient(180deg, #f4fff4, #dcf4df);
+      box-shadow: 0 0 0 2px rgba(69,160,84,.1), 0 0 13px rgba(54,160,72,.28), inset 0 1px 2px rgba(37,100,48,.08);
+      animation: calculated-value-glow 1.55s ease-in-out infinite;
+    }
+    @keyframes calculated-value-glow {
+      0%, 100% { box-shadow: 0 0 0 2px rgba(69,160,84,.1), 0 0 10px rgba(54,160,72,.22), inset 0 1px 2px rgba(37,100,48,.08); }
+      50% { box-shadow: 0 0 0 3px rgba(69,160,84,.16), 0 0 17px rgba(54,160,72,.38), inset 0 1px 2px rgba(37,100,48,.08); }
+    }
+
+    .form-actions {
+      display: grid;
+      flex: 0 0 auto;
+      grid-template-columns: 1fr;
+      gap: 9px;
+      padding: 0 14px 9px;
+    }
+    .action-button {
+      display: inline-flex;
+      min-height: 39px;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: .78rem;
+      font-weight: 700;
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+    }
+    .action-button:active { transform: translateY(2px); }
+    .action-button svg { width: 16px; height: 16px; }
+    .add-button {
+      min-height: 45px;
+      border: 1px solid rgba(255,228,193,.56);
+      color: #fffaf3;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+      box-shadow: 0 4px 0 #6f2f08, 0 7px 10px rgba(84,36,7,.18), inset 1px 1px 0 rgba(255,230,190,.35);
+    }
+    .add-button:active { box-shadow: 0 1px 0 #6f2f08, 0 3px 5px rgba(84,36,7,.16); }
+
+    .bottom-shortcuts {
+      display: grid;
+      flex: 0 0 auto;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+      padding: 0 14px 12px;
+    }
+    .normal-calculation {
+      display: grid;
+      flex: 0 0 auto;
+      gap: 8px;
+      margin: 0 14px 14px;
+      padding: 10px;
+      border: 1px solid rgba(112,145,92,.36);
+      border-radius: 15px;
+      background: linear-gradient(145deg, rgba(255,255,250,.96), rgba(233,242,221,.86));
+      box-shadow: 0 3px 0 rgba(128,151,106,.3), 0 6px 11px rgba(72,89,50,.1), inset 0 1px 0 #fff;
+    }
+    .normal-calculation h2 {
+      margin: 0;
+      color: #435a32;
+      font-family: Outfit, sans-serif;
+      font-size: .78rem;
+      font-weight: 800;
+    }
+    .normal-entry-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+    }
+    .normal-amount-button {
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+      min-height: 39px;
+    }
+    .normal-add-button {
+      display: inline-flex;
+      min-width: 78px;
+      min-height: 39px;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 10px;
+      border: 1px solid rgba(74,126,67,.4);
+      border-radius: 10px;
+      color: #fff;
+      background: linear-gradient(145deg, #5d9b4a, #39733b);
+      box-shadow: 0 3px 0 #2c5d32, inset 1px 1px 0 rgba(255,255,255,.28);
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: .7rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .normal-add-button:active { transform: translateY(2px); box-shadow: 0 1px 0 #2c5d32; }
+    .normal-entry-list {
+      max-height: 54px;
+      overflow: auto;
+      padding: 5px 7px;
+      border-radius: 8px;
+      color: #55714a;
+      background: rgba(218,235,207,.48);
+      font-size: .65rem;
+      font-weight: 700;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      scrollbar-width: thin;
+    }
+    .normal-total-breakdown {
+      display: grid;
+      gap: 3px;
+      padding-top: 3px;
+      border-top: 1px solid rgba(112,145,92,.22);
+    }
+    .normal-total-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #647258;
+      font-size: .62rem;
+      font-weight: 600;
+    }
+    .normal-total-line strong {
+      color: #435a32;
+      font-family: Outfit, sans-serif;
+      font-size: .68rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .normal-total-line.is-combined {
+      margin-top: 2px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(112,145,92,.22);
+      color: #364d2b;
+      font-weight: 800;
+    }
+    .normal-total-line.is-combined strong { color: #2f652f; font-size: .76rem; }
+    .history-scroll {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(143,91,49,.35) transparent;
+    }
+    .grand-total {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      min-height: 69px;
+      padding: 9px 10px;
+      border: 1px solid rgba(124,78,39,.34);
+      border-radius: 15px;
+      background: linear-gradient(145deg, rgba(255,252,246,.94), rgba(241,225,204,.94));
+      box-shadow: 0 3px 0 rgba(171,130,90,.38), 0 6px 11px rgba(91,55,24,.11), inset 0 1px 0 #fff;
+    }
+    .grand-label {
+      color: #806448;
+      font-size: .58rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .grand-amount {
+      color: #4f2b0d;
+      font-family: Outfit, sans-serif;
+      font-size: clamp(1.02rem, 4.3vw, 1.35rem);
+      font-weight: 800;
+      letter-spacing: -.035em;
+      white-space: nowrap;
+    }
+    .history-entrance {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 7px;
+      padding: 9px 10px;
+      border: 1px solid rgba(130,76,34,.38);
+      border-radius: 15px;
+      color: var(--accent-dark);
+      background: linear-gradient(145deg, #fffaf2, #eee0cf);
+      box-shadow: 0 3px 0 rgba(171,130,90,.38), 0 6px 11px rgba(91,55,24,.11), inset 0 1px 0 #fff;
+      cursor: pointer;
+      text-align: left;
+    }
+    .complete-button {
+      border-color: rgba(130,76,34,.38);
+      color: var(--accent-dark);
+      background: linear-gradient(145deg, #fffaf2, #eee0cf);
+      box-shadow: 0 3px 0 rgba(171,130,90,.38), 0 6px 11px rgba(91,55,24,.11), inset 0 1px 0 #fff;
+    }
+    .complete-button:active { box-shadow: 0 1px 0 rgba(171,130,90,.38), 0 3px 6px rgba(91,55,24,.09); }
+    .complete-button:disabled { opacity: .48; cursor: not-allowed; }
+    .complete-mark {
+      display: grid;
+      width: 24px;
+      height: 24px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 8px;
+      color: #fff;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+      box-shadow: 0 2px 4px rgba(84,36,7,.22), inset 0 1px 0 rgba(255,255,255,.3);
+    }
+    .complete-mark svg { width: 15px; height: 15px; }
+    .history-entrance-label {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 6px;
+      font-family: Outfit, sans-serif;
+      font-size: .68rem;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+    .history-entrance-label svg { width: 16px; height: 16px; flex: 0 0 auto; }
+    .history-entrance-arrow { flex: 0 0 auto; font-size: 1.1rem; font-weight: 700; }
+    .history-wide { grid-column: 1 / -1; min-height: 53px; }
+    .history-wide .history-entrance-label { font-size: .76rem; }
+    .history-wide .history-entrance-arrow { font-size: 1.25rem; }
+
+    .item-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 43px;
+      margin: 0 0 6px;
+      padding: 6px 9px;
+      border: 1px solid rgba(139,92,52,.3);
+      border-radius: 12px;
+      background: rgba(255,252,246,.64);
+      box-shadow: 0 2px 0 rgba(171,130,90,.28), 0 4px 8px rgba(84,53,29,.075), inset 0 1px 0 rgba(255,255,255,.92);
+    }
+    .item-edit-button {
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .item-edit-button:active { transform: translateY(1px); }
+    .item-edit-button:hover { border-color: rgba(180,83,9,.48); box-shadow: 0 2px 0 rgba(171,130,90,.28), 0 5px 10px rgba(84,53,29,.12), inset 0 1px 0 rgba(255,255,255,.94); }
+    .item-number {
+      display: grid;
+      width: 23px;
+      height: 23px;
+      place-items: center;
+      border-radius: 8px;
+      color: #9a581f;
+      background: rgba(180,83,9,.1);
+      font-family: Outfit, sans-serif;
+      font-size: .67rem;
+      font-weight: 700;
+    }
+    .item-description { min-width: 0; }
+    .item-main {
+      overflow: hidden;
+      color: #4e3522;
+      font-family: Outfit, sans-serif;
+      font-size: .75rem;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .item-amount {
+      color: #58310f;
+      font-family: Outfit, sans-serif;
+      font-size: .82rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .empty-state {
+      display: grid;
+      min-height: 72px;
+      place-items: center;
+      padding: 12px;
+      color: #9b836c;
+      font-size: .69rem;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .history-scroll { padding: 0 14px 12px; }
+    .history-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+      margin: 0;
+      padding: 3px 14px 10px;
+    }
+    .history-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .history-toolbar h2 {
+      margin: 0;
+      color: #523720;
+      font-family: Outfit, sans-serif;
+      font-size: .82rem;
+    }
+    .back-button {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(255,232,196,.76);
+      border-radius: 13px;
+      color: #fffaf3;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+      box-shadow: 0 3px 0 #6f2f08, 0 5px 9px rgba(84,36,7,.16), inset 1px 1px 0 rgba(255,230,190,.35);
+      cursor: pointer;
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .back-button:active { transform: translateY(2px); box-shadow: 0 1px 0 #6f2f08, inset 1px 1px 0 rgba(255,230,190,.35); }
+    .clear-history-button {
+      min-height: 31px;
+      padding: 0 10px;
+      border: 1px solid rgba(160,85,28,.22);
+      border-radius: 9px;
+      color: var(--accent-dark);
+      background: #fff6e9;
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: .65rem;
+      font-weight: 700;
+    }
+    .new-customer-button {
+      border-color: rgba(145,75,19,.45);
+      color: #fffaf3;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+      box-shadow: 0 2px 0 #6f2f08, inset 1px 1px 0 rgba(255,230,190,.32);
+    }
+    .clear-history-button {
+      border-color: rgba(145,55,30,.2);
+      color: #90421f;
+      background: rgba(255,246,238,.88);
+    }
+    .history-section-label {
+      margin: 12px 2px 6px;
+      color: #987959;
+      font-size: .62rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .history-bill {
+      margin: 0 0 8px;
+      overflow: hidden;
+      border: 1px solid rgba(139,92,52,.3);
+      border-radius: 13px;
+      background: rgba(255,252,246,.67);
+      box-shadow: 0 3px 0 rgba(171,130,90,.28), 0 5px 9px rgba(84,53,29,.075);
+    }
+    .history-bill-head {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+    }
+    .history-bill-toggle {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+    .history-bill-title {
+      overflow: hidden;
+      color: #543a25;
+      font-family: Outfit, sans-serif;
+      font-size: .74rem;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history-bill-total {
+      color: #58310f;
+      font-family: Outfit, sans-serif;
+      font-size: .77rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .delete-bill-button {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(145,55,30,.15);
+      border-radius: 9px;
+      color: #90421f;
+      background: rgba(255,245,235,.82);
+      cursor: pointer;
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+    .history-bill-items { padding: 0 7px 5px; }
+    .history-bill-items[hidden] { display: none; }
+    .history-bill-items .item-row {
+      min-height: 39px;
+      margin-bottom: 5px;
+      padding: 5px 7px;
+      background: rgba(255,255,255,.62);
+    }
+    .bill-total-breakdown {
+      display: grid;
+      gap: 4px;
+      margin: 7px 3px 8px;
+      padding: 8px 9px;
+      border: 1px solid rgba(112,145,92,.28);
+      border-radius: 9px;
+      background: rgba(237,246,229,.72);
+    }
+    .bill-total-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #667658;
+      font-size: .64rem;
+      font-weight: 600;
+    }
+    .bill-total-line strong { color: #405734; font-family: Outfit,sans-serif; font-weight: 800; white-space: nowrap; }
+    .bill-total-line.is-combined { padding-top: 4px; border-top: 1px solid rgba(112,145,92,.22); color: #354b2b; font-weight: 800; }
+    .bill-total-line.is-combined strong { color: #2f652f; }
+    .new-item-button {
+      display: flex;
+      width: 100%;
+      min-height: 36px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 2px 0 8px;
+      border: 1px dashed rgba(151,88,37,.48);
+      border-radius: 10px;
+      color: #87500f;
+      background: rgba(255,248,237,.9);
+      box-shadow: 0 2px 0 rgba(171,130,90,.22);
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: .68rem;
+      font-weight: 700;
+    }
+    .new-item-button:active { transform: translateY(1px); }
+    .history-bill-items .new-item-button { margin: 4px 0 3px; }
+    .bill-chevron { display: inline-block; margin-left: 4px; color: #a78360; transition: transform 140ms ease; }
+    .history-bill-toggle[aria-expanded="true"] .bill-chevron { transform: rotate(180deg); }
+
+    .keypad-overlay {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      background: rgba(24,14,7,.24);
+    }
+    .keypad-overlay[hidden] { display: none; }
+    .keypad {
+      width: min(100%, 370px);
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.68);
+      border-radius: 22px;
+      background: linear-gradient(145deg, #fffaf2, #ebd8c0);
+      box-shadow: 0 22px 60px rgba(0,0,0,.36), inset 1px 1px 0 #fff;
+    }
+    .keypad-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 1px 2px 10px;
+    }
+    .keypad-label { color: #755337; font-family: Outfit, sans-serif; font-size: .76rem; font-weight: 700; }
+    .keypad-value {
+      min-height: 38px;
+      overflow: hidden;
+      padding: 3px 2px;
+      color: #2b190d;
+      font-family: Outfit, sans-serif;
+      font-size: 1.45rem;
+      font-weight: 800;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .key-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 8px;
+    }
+    .key {
+      grid-column: span 4;
+      min-height: clamp(44px, 7.2vh, 56px);
+      border: 1px solid rgba(130,81,42,.15);
+      border-radius: 13px;
+      color: #422b1b;
+      background: linear-gradient(145deg, #fffdf9, #f4e8d9);
+      box-shadow: 0 3px 0 #dbc6ad, 0 5px 8px rgba(70,43,22,.09), inset 0 1px 0 #fff;
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: 1.22rem;
+      font-weight: 700;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    .key:active { transform: translateY(2px); box-shadow: 0 1px 0 #dbc6ad, inset 0 1px 0 #fff; }
+    .key.utility {
+      grid-column: span 3;
+      color: #87500f;
+      background: linear-gradient(145deg, #f8e8d0, #ecd5b7);
+      font-size: .86rem;
+    }
+    .key[data-key="0"], .key.delete-key { grid-column: span 3; }
+    .key.delete-key { color: #8a4017; font-size: 1.18rem; }
+    .key.confirm {
+      display: flex;
+      width: 100%;
+      min-height: 47px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      border: 1px solid rgba(255,228,193,.58);
+      border-radius: 13px;
+      color: #fffaf3;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+      box-shadow: 0 4px 0 #6f2f08, inset 1px 1px 0 rgba(255,230,190,.36);
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      touch-action: manipulation;
+    }
+    .key.confirm:active { transform: translateY(2px); box-shadow: 0 2px 0 #6f2f08; }
+    .key.confirm svg { width: 18px; height: 18px; }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      right: 16px;
+      bottom: max(82px, calc(env(safe-area-inset-bottom) + 74px));
+      left: 16px;
+      width: fit-content;
+      max-width: calc(100% - 32px);
+      margin: auto;
+      padding: 9px 14px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 99px;
+      color: #fffaf3;
+      background: rgba(52,33,23,.94);
+      box-shadow: 0 8px 22px rgba(0,0,0,.2);
+      font-size: .72rem;
+      font-weight: 600;
+      text-align: center;
+      pointer-events: none;
+    }
+    .toast[hidden] { display: none; }
+    .confirm-overlay {
+      position: fixed;
+      z-index: 30;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(24,14,7,.42);
+    }
+    .confirm-overlay[hidden] { display: none; }
+    .confirm-card {
+      width: min(100%, 350px);
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 19px;
+      background: linear-gradient(145deg, #fffaf2, #ebd8c0);
+      box-shadow: 0 18px 48px rgba(0,0,0,.28), inset 1px 1px 0 #fff;
+    }
+    .confirm-card h2 {
+      margin: 0;
+      color: #3e2817;
+      font-family: Outfit, sans-serif;
+      font-size: 1.05rem;
+    }
+    .confirm-card p {
+      margin: 8px 0 17px;
+      color: #806b55;
+      font-size: .78rem;
+      line-height: 1.5;
+    }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .confirm-actions button {
+      min-height: 38px;
+      padding: 0 13px;
+      border: 1px solid rgba(120,75,39,.2);
+      border-radius: 10px;
+      color: #76563c;
+      background: #fffaf2;
+      cursor: pointer;
+      font-family: Outfit, sans-serif;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .confirm-actions .confirm-danger {
+      border-color: #8a390c;
+      color: #fffaf3;
+      background: linear-gradient(145deg, #c4670b, #923f08);
+    }
+    button:focus-visible { outline: 3px solid rgba(180,83,9,.38); outline-offset: 2px; }
+
+    @media (max-height: 680px) {
+      .app-header { padding-top: 8px; padding-bottom: 6px; }
+      h1 { font-size: 1.42rem; }
+      .language-picker { width: 40px; height: 40px; }
+      .fields { gap: 7px; padding-bottom: 8px; }
+      .field { min-height: 45px; padding-block: 4px; }
+      .form-actions { padding-bottom: 6px; }
+      .grand-total { min-height: 60px; }
+      .keypad { padding: 10px; }
+      .key-grid { gap: 6px; }
+      .key { min-height: 39px; }
+      .key.confirm { min-height: 40px; margin-top: 7px; }
+    }
+    @media (max-width: 390px) {
+      .app-header { gap: 8px; }
+      .language-picker { width: 40px; height: 40px; }
+      h1 { font-size: 1.18rem; white-space: nowrap; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      .view[data-entering="history"]:not([hidden]) { animation-duration: 180ms !important; }
+      .view[data-entering="calculation"]:not([hidden]) { animation-duration: 180ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+      <section class="app-card" id="appCard" aria-label="Kirana Store Calculation">
+      <header class="app-header">
+        <label class="language-picker" id="languagePicker" aria-label="Choose language">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 12h17M12 3c2.3 2.4 3.4 5.4 3.4 9s-1.1 6.6-3.4 9c-2.3-2.4-3.4-5.4-3.4-9S9.7 5.4 12 3Z" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span class="language-chevron" aria-hidden="true">⌄</span>
+          <select class="language-select" id="languageSelect" aria-label="Choose language">
+            <option value="en">English</option>
+            <option value="hi">हिंदी</option>
+          </select>
+        </label>
+        <div class="heading-wrap">
+          <h1 id="appTitle">Kirana Store Calculation</h1>
+        </div>
+      </header>
+
+      <section class="view" id="calculationView" role="tabpanel" aria-label="Calculation">
+        <div class="fields" id="fieldsGroup" aria-label="Price and quantity">
+          <div class="field">
+            <div class="field-copy">
+              <span class="field-label" id="priceLabel">Price / 1 kg</span>
+            </div>
+            <button class="value-button is-empty" id="priceValue" type="button" data-field="price" data-placeholder="Tap to enter" aria-label="Tap to enter price per kilogram"></button>
+          </div>
+          <div class="field">
+            <div class="field-copy">
+              <span class="field-label" id="weightLabel">Weight (g)</span>
+            </div>
+            <button class="value-button is-empty" id="weightValue" type="button" data-field="weight" data-placeholder="Tap to enter" aria-label="Tap to enter weight in grams"></button>
+          </div>
+          <div class="field">
+            <div class="field-copy">
+              <span class="field-label" id="costLabel">Cost (₹)</span>
+            </div>
+            <button class="value-button is-empty" id="costValue" type="button" data-field="cost" data-placeholder="Tap to enter cost in rupees"></button>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="action-button add-button" id="addItemButton" type="button">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
+            <span id="addButtonLabel">Add to bill</span>
+          </button>
+        </div>
+
+        <div class="bottom-shortcuts">
+          <button class="history-entrance complete-button" id="completeButton" type="button" aria-label="Complete item">
+            <span class="history-entrance-label">
+              <span class="complete-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12.5 4.3 4.3L19.5 6.8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+              <span id="completeButtonLabel">Complete item</span>
+            </span>
+          </button>
+          <div class="grand-total" aria-live="polite">
+            <div>
+              <div class="grand-label" id="grandLabel">Grand total</div>
+            </div>
+            <div class="grand-amount" id="grandTotal">₹ 0.00</div>
+          </div>
+          <button class="history-entrance history-wide" id="historyButton" type="button" aria-label="Open bill history">
+            <span class="history-entrance-label">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h10M3 3.5h18v17H3v-17Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              <span id="historyButtonLabel">Bill history</span>
+            </span>
+            <span class="history-entrance-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+
+        <section class="normal-calculation" id="normalCalculationPanel" aria-labelledby="normalCalculationTitle">
+          <h2 id="normalCalculationTitle">Normal calculation</h2>
+          <div class="normal-entry-controls">
+            <button class="value-button is-empty normal-amount-button" id="normalAmountValue" type="button" data-field="normalAmount" data-placeholder="Tap to enter" aria-label="Tap to enter a normal amount"></button>
+            <button class="normal-add-button" id="addNormalAmountButton" type="button" aria-label="Add normal amount">
+              <span aria-hidden="true">＋</span><span id="addNormalAmountLabel">Add</span>
+            </button>
+          </div>
+          <div class="normal-entry-list" id="normalEntryList" aria-live="polite">No normal amounts yet.</div>
+          <div class="normal-total-breakdown" aria-live="polite">
+            <div class="normal-total-line"><span id="homeGramTotalLabel">Gram items total</span><strong id="homeGramTotal">₹ 0.00</strong></div>
+            <div class="normal-total-line"><span id="homeNormalTotalLabel">Normal total</span><strong id="homeNormalTotal">₹ 0.00</strong></div>
+            <div class="normal-total-line is-combined"><span id="homeCombinedTotalLabel">Combined total</span><strong id="homeCombinedTotal">₹ 0.00</strong></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="historyView" role="tabpanel" aria-label="Bill history" hidden>
+        <div class="history-toolbar">
+          <div class="history-title-row">
+            <button class="back-button" id="backToCalculator" type="button" aria-label="Back to calculation">←</button>
+            <h2 id="historyTitle">Bill history</h2>
+          </div>
+          <button class="clear-history-button new-customer-button" id="newCustomerButton" type="button" hidden>＋ New customer</button>
+          <button class="clear-history-button" id="clearHistoryButton" type="button">Clear history</button>
+        </div>
+        <div class="history-scroll" id="historyScroll">
+          <div class="history-section-label" id="completedBillsLabel">Completed bills</div>
+          <div id="savedBills"></div>
+        </div>
+      </section>
+
+    </section>
+  </main>
+
+  <div class="keypad-overlay" id="keypadOverlay" hidden>
+    <section class="keypad" role="dialog" aria-modal="true" aria-labelledby="keypadLabel">
+      <div class="keypad-top">
+        <div class="keypad-label" id="keypadLabel">Enter value</div>
+        <div class="keypad-value" id="keypadValue" aria-live="polite">0</div>
+      </div>
+      <div class="key-grid" id="keyGrid">
+        <button class="key" type="button" data-key="1">1</button>
+        <button class="key" type="button" data-key="2">2</button>
+        <button class="key" type="button" data-key="3">3</button>
+        <button class="key" type="button" data-key="4">4</button>
+        <button class="key" type="button" data-key="5">5</button>
+        <button class="key" type="button" data-key="6">6</button>
+        <button class="key" type="button" data-key="7">7</button>
+        <button class="key" type="button" data-key="8">8</button>
+        <button class="key" type="button" data-key="9">9</button>
+        <button class="key utility" type="button" data-key="AC" aria-label="Clear this value">AC</button>
+        <button class="key" type="button" data-key="0">0</button>
+        <button class="key utility" type="button" data-key="." aria-label="Decimal point">.</button>
+        <button class="key delete-key" type="button" data-key="BACK" aria-label="Delete last digit">×</button>
+      </div>
+      <button class="key confirm" id="confirmKeypad" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.3 4.3L19.5 6.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        <span id="keypadDoneLabel">Done</span>
+      </button>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <div class="confirm-overlay" id="confirmOverlay" hidden>
+    <section class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle">Confirm</h2>
+      <p id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button id="cancelConfirm" type="button">Cancel</button>
+        <button class="confirm-danger" id="acceptConfirm" type="button">Delete</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (id) => document.getElementById(id);
+      const els = {
+        appTitle: $("appTitle"),
+        languagePicker: $("languagePicker"),
+        languageSelect: $("languageSelect"),
+        fieldsGroup: $("fieldsGroup"),
+        priceLabel: $("priceLabel"),
+        priceValue: $("priceValue"),
+        weightValue: $("weightValue"),
+        costValue: $("costValue"),
+        weightLabel: $("weightLabel"),
+        costLabel: $("costLabel"),
+        grandLabel: $("grandLabel"),
+        completeButton: $("completeButton"),
+        completeButtonLabel: $("completeButtonLabel"),
+        historyButton: $("historyButton"),
+        historyButtonLabel: $("historyButtonLabel"),
+        historyTitle: $("historyTitle"),
+        completedBillsLabel: $("completedBillsLabel"),
+        newCustomerButton: $("newCustomerButton"),
+        clearHistoryButton: $("clearHistoryButton"),
+        calculationView: $("calculationView"),
+        historyView: $("historyView"),
+        backToCalculator: $("backToCalculator"),
+        savedBills: $("savedBills"),
+        grandTotal: $("grandTotal"),
+        normalAmountValue: $("normalAmountValue"),
+        addNormalAmountButton: $("addNormalAmountButton"),
+        addNormalAmountLabel: $("addNormalAmountLabel"),
+        normalCalculationTitle: $("normalCalculationTitle"),
+        normalEntryList: $("normalEntryList"),
+        homeGramTotalLabel: $("homeGramTotalLabel"),
+        homeGramTotal: $("homeGramTotal"),
+        homeNormalTotalLabel: $("homeNormalTotalLabel"),
+        homeNormalTotal: $("homeNormalTotal"),
+        homeCombinedTotalLabel: $("homeCombinedTotalLabel"),
+        homeCombinedTotal: $("homeCombinedTotal"),
+        addItemButton: $("addItemButton"),
+        addButtonLabel: $("addButtonLabel"),
+        keypadOverlay: $("keypadOverlay"),
+        keypadLabel: $("keypadLabel"),
+        keypadValue: $("keypadValue"),
+        toast: $("toast"),
+        confirmOverlay: $("confirmOverlay"),
+        confirmTitle: $("confirmTitle"),
+        confirmMessage: $("confirmMessage"),
+        acceptConfirm: $("acceptConfirm")
+      };
+
+      const STORAGE_KEY = "dukaan-weight-calculator-v3";
+      const translations = {
+        en: {
+          appTitle: "Kirana Store Calculation",
+          calculation: "Calculation",
+          history: "Bill history",
+          chooseLanguage: "Choose language",
+          price: "Price / 1 kg",
+          weight: "Weight (g)",
+          cost: "Cost (₹)",
+          tapToEnter: "Tap to enter",
+          priceAria: "Tap to enter price per 1 kilogram",
+          weightAria: "Tap to enter weight in grams",
+          costAria: "Tap to enter cost in rupees",
+          grandTotal: "Grand total",
+          normalCalculation: "Normal calculation",
+          normalAmount: "Normal amount (₹)",
+          normalAmountAria: "Tap to enter a normal amount in rupees",
+          addAmount: "Add",
+          normalEntriesEmpty: "No normal amounts yet.",
+          normalEntry: "Normal amount {number}",
+          gramItemsTotal: "Gram items total",
+          normalTotal: "Normal total",
+          combinedTotal: "Combined total",
+          normalAmountAdded: "Amount added to this bill",
+          enterNormalAmount: "Enter an amount greater than zero",
+          completeItem: "Complete item",
+          billHistory: "Bill history",
+          addToBill: "Add to bill",
+          addToSavedBill: "Add to saved bill",
+          updateItem: "Update item",
+          newCustomer: "＋ New customer",
+          newCustomerStarted: "New customer started",
+          back: "Back to calculation",
+          clearHistory: "Clear history",
+          completedBills: "Completed bills",
+          noBills: "No completed bills yet.",
+          noItems: "No items in this bill.",
+          newItem: "＋ New item add",
+          deleteBill: "Delete bill",
+          deleteBillAria: "Delete bill from {date}",
+          billAria: "Bill dated {date}, total ₹{total}. Tap to view items",
+          editItemAria: "Edit item {number}: {grams} g, ₹{cost}",
+          enterValue: "Enter value",
+          done: "Done",
+          clearValue: "Clear this value",
+          decimal: "Decimal point",
+          backspace: "Delete last digit",
+          confirm: "Confirm",
+          cancel: "Cancel",
+          delete: "Delete",
+          clearHistoryTitle: "Clear all history?",
+          clearHistoryMessage: "This permanently deletes every completed bill. This cannot be undone.",
+          clearHistoryDone: "Completed bill history cleared",
+          deleteBillMessage: "The bill dated {date} and its {count} items will be permanently removed.",
+          billDeleted: "Bill deleted",
+          enterPrice: "Enter a unit price first",
+          enterWeight: "Enter weight or total cost",
+          itemAdded: "Item added to bill",
+          itemUpdated: "Item updated",
+          editPrompt: "Edit this item, then tap Update item",
+          newSavedBill: "Adding to saved bill · ₹ {total}",
+          missingItem: "That item is no longer available",
+          completeBill: "Customer bill completed",
+          completedBillSaved: "Completed bill saved",
+          updateBeforeComplete: "Update this item before completing the bill",
+          addBeforeComplete: "Add this item before completing the bill",
+          saveError: "This browser could not save bill history"
+        },
+        hi: {
+          appTitle: "किराना स्टोर कैलकुलेशन",
+          calculation: "कैलकुलेशन",
+          history: "बिल इतिहास",
+          chooseLanguage: "भाषा चुनें",
+          price: "कीमत / 1 kg",
+          weight: "वज़न (g)",
+          cost: "कीमत (₹)",
+          tapToEnter: "भरने के लिए टैप करें",
+          priceAria: "प्रति 1 kg कीमत भरने के लिए टैप करें",
+          weightAria: "ग्राम में वज़न भरने के लिए टैप करें",
+          costAria: "रुपये में कीमत भरने के लिए टैप करें",
+          grandTotal: "कुल राशि",
+          normalCalculation: "सामान्य कैलकुलेशन",
+          normalAmount: "सामान्य रकम (₹)",
+          normalAmountAria: "सामान्य रकम भरने के लिए टैप करें",
+          addAmount: "जोड़ें",
+          normalEntriesEmpty: "अभी कोई सामान्य रकम नहीं जोड़ी।",
+          normalEntry: "सामान्य रकम {number}",
+          gramItemsTotal: "वज़न वाले सामान का कुल",
+          normalTotal: "सामान्य कुल",
+          combinedTotal: "दोनों का कुल",
+          normalAmountAdded: "रकम इस बिल में जुड़ गई",
+          enterNormalAmount: "शून्य से अधिक रकम भरें",
+          completeItem: "आइटम पूरा करें",
+          billHistory: "बिल इतिहास",
+          addToBill: "बिल में जोड़ें",
+          addToSavedBill: "पुराने बिल में जोड़ें",
+          updateItem: "आइटम अपडेट करें",
+          newCustomer: "＋ नया ग्राहक",
+          newCustomerStarted: "नया ग्राहक शुरू हुआ",
+          back: "कैलकुलेशन पर वापस",
+          clearHistory: "इतिहास साफ़ करें",
+          completedBills: "पूरे किए गए बिल",
+          noBills: "अभी कोई पूरा किया गया बिल नहीं है।",
+          noItems: "इस बिल में कोई आइटम नहीं है।",
+          newItem: "＋ नया आइटम जोड़ें",
+          deleteBill: "बिल हटाएँ",
+          deleteBillAria: "{date} का बिल हटाएँ",
+          billAria: "{date} का बिल, कुल ₹{total}। आइटम देखने के लिए टैप करें",
+          editItemAria: "आइटम {number} बदलें: {grams} g, ₹{cost}",
+          enterValue: "राशि भरें",
+          done: "हो गया",
+          clearValue: "यह राशि साफ़ करें",
+          decimal: "दशमलव बिंदु",
+          backspace: "आखिरी अंक हटाएँ",
+          confirm: "पुष्टि करें",
+          cancel: "रद्द करें",
+          delete: "हटाएँ",
+          clearHistoryTitle: "पूरा इतिहास साफ़ करें?",
+          clearHistoryMessage: "इससे सभी पूरे किए गए बिल हमेशा के लिए हट जाएँगे। यह वापस नहीं होगा।",
+          clearHistoryDone: "पूरे किए गए बिलों का इतिहास साफ़ हुआ",
+          deleteBillMessage: "{date} का बिल और उसके {count} आइटम हमेशा के लिए हट जाएँगे।",
+          billDeleted: "बिल हटा दिया गया",
+          enterPrice: "पहले प्रति kg कीमत भरें",
+          enterWeight: "वज़न या कुल कीमत भरें",
+          itemAdded: "आइटम बिल में जुड़ गया",
+          itemUpdated: "आइटम अपडेट हो गया",
+          editPrompt: "आइटम बदलें, फिर “आइटम अपडेट करें” दबाएँ",
+          newSavedBill: "पुराने बिल में जोड़ें · ₹ {total}",
+          missingItem: "यह आइटम अब उपलब्ध नहीं है",
+          completeBill: "ग्राहक का बिल पूरा हुआ",
+          completedBillSaved: "पूरा किया गया बिल सेव हुआ",
+          updateBeforeComplete: "बिल पूरा करने से पहले इस आइटम को अपडेट करें",
+          addBeforeComplete: "बिल पूरा करने से पहले इस आइटम को जोड़ें",
+          saveError: "इस ब्राउज़र में बिल इतिहास सेव नहीं हो पाया"
+        }
+      };
+      let currentLanguage = "en";
+      let money = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      let quantityFormat = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 });
+      let fields = { price: "", weight: "", cost: "" };
+      let normalAmountInput = "";
+      let lastEdited = null;
+      let activeField = null;
+      let replaceOnNextDigit = false;
+      let toastTimer = null;
+      let pendingConfirmAction = null;
+      let activeBillId = null;
+      let editingItem = null;
+      let returnToHistoryAfterEdit = false;
+      let historyFocusBillId = null;
+      let expandedHistoryBillId = null;
+      let justCompletedBillView = false;
+
+      function t(key, values = {}) {
+        let text = translations[currentLanguage][key] || translations.en[key] || key;
+        for (const [name, value] of Object.entries(values)) {
+          text = text.replaceAll(`{${name}}`, String(value));
+        }
+        return text;
+      }
+
+      function refreshFormatters() {
+        const locale = currentLanguage === "hi" ? "hi-IN" : "en-IN";
+        money = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        quantityFormat = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+      }
+
+      function applyTranslations() {
+        document.documentElement.lang = currentLanguage;
+        document.title = t("appTitle");
+        $("appCard").setAttribute("aria-label", t("appTitle"));
+        els.appTitle.textContent = t("appTitle");
+        els.languageSelect.value = currentLanguage;
+        els.languageSelect.setAttribute("aria-label", t("chooseLanguage"));
+        els.languagePicker.setAttribute("aria-label", t("chooseLanguage"));
+        els.fieldsGroup.setAttribute("aria-label", `${t("price")}, ${t("weight")}, ${t("cost")}`);
+        els.priceLabel.textContent = t("price");
+        els.weightLabel.textContent = t("weight");
+        els.costLabel.textContent = t("cost");
+        for (const field of ["priceValue", "weightValue", "costValue"]) {
+          els[field].dataset.placeholder = t("tapToEnter");
+        }
+        els.priceValue.setAttribute("aria-label", t("priceAria"));
+        els.weightValue.setAttribute("aria-label", t("weightAria"));
+        els.costValue.setAttribute("aria-label", t("costAria"));
+        els.grandLabel.textContent = t("grandTotal");
+        els.normalCalculationTitle.textContent = t("normalCalculation");
+        els.normalAmountValue.dataset.placeholder = t("tapToEnter");
+        els.normalAmountValue.setAttribute("aria-label", t("normalAmountAria"));
+        els.addNormalAmountLabel.textContent = t("addAmount");
+        els.addNormalAmountButton.setAttribute("aria-label", t("addAmount"));
+        els.normalEntryList.setAttribute("aria-label", t("normalCalculation"));
+        els.homeGramTotalLabel.textContent = t("gramItemsTotal");
+        els.homeNormalTotalLabel.textContent = t("normalTotal");
+        els.homeCombinedTotalLabel.textContent = t("combinedTotal");
+        els.completeButtonLabel.textContent = t("completeItem");
+        els.completeButton.setAttribute("aria-label", t("completeItem"));
+        els.addItemButton.setAttribute("aria-label", t("addToBill"));
+        els.historyButtonLabel.textContent = t("billHistory");
+        els.historyButton.setAttribute("aria-label", t("billHistory"));
+        els.historyTitle.textContent = t("history");
+        els.completedBillsLabel.textContent = t("completedBills");
+        els.newCustomerButton.textContent = t("newCustomer");
+        els.newCustomerButton.setAttribute("aria-label", t("newCustomer"));
+        els.clearHistoryButton.textContent = t("clearHistory");
+        els.clearHistoryButton.setAttribute("aria-label", t("clearHistory"));
+        els.backToCalculator.setAttribute("aria-label", t("back"));
+        els.calculationView.setAttribute("aria-label", t("calculation"));
+        els.historyView.setAttribute("aria-label", t("history"));
+        $("keypadDoneLabel").textContent = t("done");
+        $("keypadLabel").textContent = t("enterValue");
+        $("keypadOverlay").setAttribute("aria-label", t("enterValue"));
+        $("cancelConfirm").textContent = t("cancel");
+        $("acceptConfirm").textContent = t("delete");
+        $("cancelConfirm").setAttribute("aria-label", t("cancel"));
+        $("acceptConfirm").setAttribute("aria-label", t("delete"));
+        $("confirmTitle").textContent = t("confirm");
+        $("keyGrid").querySelector('[data-key="AC"]').setAttribute("aria-label", t("clearValue"));
+        $("keyGrid").querySelector('[data-key="."]').setAttribute("aria-label", t("decimal"));
+        $("keyGrid").querySelector('[data-key="BACK"]').setAttribute("aria-label", t("backspace"));
+      }
+
+      const newBill = () => ({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, createdAt: new Date().toISOString(), items: [], normalEntries: [] });
+      let currentBill = newBill();
+      let savedBills = [];
+
+      function normalizeBill(bill) {
+        if (!Array.isArray(bill.normalEntries)) bill.normalEntries = [];
+        return bill;
+      }
+
+      function findBill(id) {
+        if (!id || id === currentBill.id) return currentBill;
+        return savedBills.find((bill) => bill.id === id) || null;
+      }
+
+      function getActiveBill() {
+        return findBill(activeBillId) || currentBill;
+      }
+
+      function loadSavedData() {
+        try {
+          localStorage.removeItem("dukaan-weight-calculator-v2");
+          const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+          if (!data || typeof data !== "object") return;
+          currentLanguage = data.language === "hi" ? "hi" : "en";
+          if (data.currentBill && Array.isArray(data.currentBill.items)) currentBill = normalizeBill(data.currentBill);
+          if (Array.isArray(data.savedBills)) {
+            savedBills = data.savedBills
+              .filter((bill) => bill && Array.isArray(bill.items))
+              .map(normalizeBill);
+          }
+        } catch (_) {
+          // Storage may be unavailable or contain malformed data; begin with an empty bill.
+        }
+      }
+
+      function persist() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBill, savedBills, language: currentLanguage }));
+        } catch (_) {
+          showToast(t("saveError"));
+        }
+      }
+
+      function toNumber(value) {
+        if (value === "" || value === null || value === undefined) return null;
+        const number = Number(value);
+        return Number.isFinite(number) && number >= 0 ? number : null;
+      }
+
+      function rounded(value) {
+        return Math.round((value + Number.EPSILON) * 100) / 100;
+      }
+
+      function showNumber(value, type) {
+        if (value === "") return "";
+        const number = Number(value);
+        if (!Number.isFinite(number)) return "";
+        if (type === "price" || type === "cost") return `₹ ${money.format(number)}`;
+        return `${quantityFormat.format(number)} g`;
+      }
+
+      function gramItemsTotal(bill) {
+        return (bill.items || []).reduce((sum, item) => sum + Number(item.cost || 0), 0);
+      }
+
+      function normalTotal(bill) {
+        return (bill.normalEntries || []).reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+      }
+
+      function itemTotal(bill) {
+        return gramItemsTotal(bill) + normalTotal(bill);
+      }
+
+      function billEntryCount(bill) {
+        return (bill.items || []).length + (bill.normalEntries || []).length;
+      }
+
+      function calculateFromWeight() {
+        const price = toNumber(fields.price);
+        const grams = toNumber(fields.weight);
+        fields.cost = price === null || grams === null ? "" : String(rounded((price / 1000) * grams));
+      }
+
+      function calculateFromCost() {
+        const price = toNumber(fields.price);
+        const cost = toNumber(fields.cost);
+        fields.weight = price === null || price === 0 || cost === null
+          ? ""
+          : String(rounded((cost / price) * 1000));
+      }
+
+      function recalculate() {
+        if (lastEdited === "weight") calculateFromWeight();
+        if (lastEdited === "cost") calculateFromCost();
+      }
+
+      function calculatedField() {
+        if (lastEdited === "weight" && toNumber(fields.cost) !== null) return "cost";
+        if (lastEdited === "cost" && toNumber(fields.weight) !== null) return "weight";
+        return null;
+      }
+
+      function renderFields() {
+        els.priceValue.textContent = showNumber(fields.price, "price");
+        els.weightValue.textContent = showNumber(fields.weight, "weight");
+        els.costValue.textContent = showNumber(fields.cost, "cost");
+        els.priceValue.classList.toggle("is-empty", fields.price === "");
+        els.weightValue.classList.toggle("is-empty", fields.weight === "");
+        els.costValue.classList.toggle("is-empty", fields.cost === "");
+        const resultField = calculatedField();
+        els.priceValue.classList.toggle("is-calculated", resultField === "price");
+        els.weightValue.classList.toggle("is-calculated", resultField === "weight");
+        els.costValue.classList.toggle("is-calculated", resultField === "cost");
+        if (!els.keypadOverlay.hidden && activeField) {
+          els.keypadLabel.textContent = t(activeField);
+          els.keypadValue.textContent = activeInputValue() || "0";
+        }
+      }
+
+      function appendBillTotalLine(container, label, amount, combined = false) {
+        const line = document.createElement("div");
+        line.className = `bill-total-line${combined ? " is-combined" : ""}`;
+        const labelNode = document.createElement("span");
+        labelNode.textContent = label;
+        const amountNode = document.createElement("strong");
+        amountNode.textContent = `₹ ${money.format(amount)}`;
+        line.append(labelNode, amountNode);
+        container.append(line);
+      }
+
+      function renderItemRows(container, bill) {
+        container.replaceChildren();
+        const items = bill.items || [];
+        const normalEntries = bill.normalEntries || [];
+        if (!billEntryCount(bill)) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = t("noItems");
+          container.append(empty);
+          return;
+        }
+        items.forEach((item, index) => {
+          const row = document.createElement("button");
+          row.className = "item-row item-edit-button";
+          row.type = "button";
+          row.setAttribute("aria-label", t("editItemAria", {
+            number: quantityFormat.format(index + 1),
+            grams: quantityFormat.format(Number(item.grams)),
+            cost: money.format(Number(item.cost))
+          }));
+          const serial = document.createElement("span");
+          serial.className = "item-number";
+          serial.textContent = String(index + 1);
+          const description = document.createElement("div");
+          description.className = "item-description";
+          const main = document.createElement("div");
+          main.className = "item-main";
+          main.textContent = `${quantityFormat.format(Number(item.grams))} g × ₹${money.format(Number(item.pricePerKg))} / kg`;
+          description.append(main);
+          const amount = document.createElement("span");
+          amount.className = "item-amount";
+          amount.textContent = `₹ ${money.format(Number(item.cost))}`;
+          row.append(serial, description, amount);
+          row.addEventListener("click", () => startEditItem(bill, index));
+          container.append(row);
+        });
+        normalEntries.forEach((entry, index) => {
+          const row = document.createElement("div");
+          row.className = "item-row normal-item-row";
+          const serial = document.createElement("span");
+          serial.className = "item-number";
+          serial.textContent = String(items.length + index + 1);
+          const description = document.createElement("div");
+          description.className = "item-description";
+          const main = document.createElement("div");
+          main.className = "item-main";
+          main.textContent = t("normalEntry", { number: quantityFormat.format(index + 1) });
+          description.append(main);
+          const amount = document.createElement("span");
+          amount.className = "item-amount";
+          amount.textContent = `₹ ${money.format(Number(entry.amount || 0))}`;
+          row.append(serial, description, amount);
+          container.append(row);
+        });
+        const totals = document.createElement("div");
+        totals.className = "bill-total-breakdown";
+        appendBillTotalLine(totals, t("gramItemsTotal"), gramItemsTotal(bill));
+        appendBillTotalLine(totals, t("normalTotal"), normalTotal(bill));
+        appendBillTotalLine(totals, t("combinedTotal"), itemTotal(bill), true);
+        container.append(totals);
+      }
+
+      function renderNormalCalculation(bill) {
+        const entries = bill.normalEntries || [];
+        els.normalAmountValue.textContent = normalAmountInput === ""
+          ? ""
+          : showNumber(normalAmountInput, "cost");
+        els.normalAmountValue.classList.toggle("is-empty", normalAmountInput === "");
+        els.normalEntryList.textContent = entries.length
+          ? entries.map((entry) => `₹ ${money.format(Number(entry.amount || 0))}`).join(" + ")
+          : t("normalEntriesEmpty");
+        els.homeGramTotal.textContent = `₹ ${money.format(gramItemsTotal(bill))}`;
+        els.homeNormalTotal.textContent = `₹ ${money.format(normalTotal(bill))}`;
+        els.homeCombinedTotal.textContent = `₹ ${money.format(itemTotal(bill))}`;
+      }
+
+      function formatDate(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return currentLanguage === "hi" ? "अज्ञात तारीख" : "Unknown date";
+        const locale = currentLanguage === "hi" ? "hi-IN" : "en-IN";
+        return date.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+      }
+
+      function renderSavedBills() {
+        els.savedBills.replaceChildren();
+        const visibleBills = historyFocusBillId
+          ? savedBills.filter((bill) => bill.id === historyFocusBillId)
+          : savedBills;
+        if (!visibleBills.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.textContent = t("noBills");
+          els.savedBills.append(empty);
+          return;
+        }
+
+        [...visibleBills].reverse().forEach((bill) => {
+          const card = document.createElement("article");
+          card.className = "history-bill";
+          const head = document.createElement("div");
+          head.className = "history-bill-head";
+          const toggle = document.createElement("button");
+          toggle.className = "history-bill-toggle";
+          toggle.type = "button";
+          const isExpanded = expandedHistoryBillId === bill.id;
+          toggle.setAttribute("aria-expanded", String(isExpanded));
+          const title = document.createElement("span");
+          title.className = "history-bill-title";
+          const dateLabel = formatDate(bill.finishedAt || bill.createdAt);
+          title.textContent = dateLabel;
+          const total = document.createElement("span");
+          total.className = "history-bill-total";
+          const totalAmount = money.format(itemTotal(bill));
+          total.innerHTML = `₹ ${totalAmount}<span class="bill-chevron" aria-hidden="true">⌄</span>`;
+          toggle.setAttribute("aria-label", t("billAria", { date: dateLabel, total: totalAmount }));
+          toggle.append(title, total);
+          const deleteButton = document.createElement("button");
+          deleteButton.className = "delete-bill-button";
+          deleteButton.type = "button";
+          deleteButton.textContent = "×";
+          deleteButton.setAttribute("aria-label", t("deleteBillAria", { date: dateLabel }));
+          const details = document.createElement("div");
+          details.className = "history-bill-items";
+          details.hidden = !isExpanded;
+          renderItemRows(details, bill);
+          const newItemButton = document.createElement("button");
+          newItemButton.className = "new-item-button";
+          newItemButton.type = "button";
+          newItemButton.textContent = t("newItem");
+          newItemButton.setAttribute("aria-label", t("newItem"));
+          newItemButton.addEventListener("click", () => startNewItem(bill));
+          details.append(newItemButton);
+          toggle.addEventListener("click", () => {
+            expandedHistoryBillId = expandedHistoryBillId === bill.id ? null : bill.id;
+            renderSavedBills();
+          });
+          deleteButton.addEventListener("click", () => {
+            askConfirm(
+              t("deleteBill"),
+              t("deleteBillMessage", { date: dateLabel, count: billEntryCount(bill) }),
+              t("deleteBill"),
+              () => {
+                savedBills = savedBills.filter((saved) => saved.id !== bill.id);
+                if (expandedHistoryBillId === bill.id) expandedHistoryBillId = null;
+                if (historyFocusBillId === bill.id) {
+                  historyFocusBillId = null;
+                  justCompletedBillView = false;
+                }
+                if (activeBillId === bill.id) activeBillId = null;
+                if (editingItem && editingItem.billId === bill.id) {
+                  editingItem = null;
+                  returnToHistoryAfterEdit = false;
+                  fields = { price: "", weight: "", cost: "" };
+                  lastEdited = null;
+                }
+                persist();
+                render();
+                showToast(t("billDeleted"));
+              }
+            );
+          });
+          head.append(toggle, deleteButton);
+          card.append(head, details);
+          els.savedBills.append(card);
+        });
+      }
+
+      function renderBills() {
+        const displayedBill = getActiveBill();
+        const total = itemTotal(displayedBill);
+        els.grandTotal.textContent = `₹ ${money.format(total)}`;
+        els.completeButton.disabled = billEntryCount(displayedBill) === 0;
+        els.completeButton.setAttribute("aria-label", t("completeItem"));
+        els.newCustomerButton.hidden = !justCompletedBillView;
+        els.clearHistoryButton.hidden = justCompletedBillView;
+        els.addButtonLabel.textContent = editingItem
+          ? t("updateItem")
+          : displayedBill === currentBill ? t("addToBill") : t("addToSavedBill");
+        els.addItemButton.setAttribute("aria-label", editingItem
+          ? t("updateItem")
+          : displayedBill === currentBill ? t("addToBill") : t("addToSavedBill"));
+        const addPath = els.addItemButton.querySelector("svg path");
+        if (addPath) {
+          addPath.setAttribute("d", editingItem
+            ? "m5 12.5 4.3 4.3L19.5 6.8"
+            : "M12 5v14M5 12h14");
+        }
+        renderNormalCalculation(displayedBill);
+        renderSavedBills();
+      }
+
+      function render() {
+        renderFields();
+        renderBills();
+      }
+
+      function setView(view) {
+        const isCalculation = view === "calculation";
+        const enteringView = isCalculation ? "calculation" : "history";
+        els.calculationView.dataset.entering = enteringView;
+        els.historyView.dataset.entering = enteringView;
+        els.calculationView.hidden = !isCalculation;
+        els.historyView.hidden = isCalculation;
+        if (!isCalculation) $("historyScroll").scrollTop = 0;
+      }
+
+      function startEditItem(bill, index) {
+        const item = bill && bill.items[index];
+        if (!item) return;
+        activeBillId = bill.id;
+        editingItem = { billId: bill.id, index };
+        returnToHistoryAfterEdit = true;
+        historyFocusBillId = bill.id;
+        justCompletedBillView = false;
+        normalAmountInput = "";
+        fields = {
+          price: String(item.pricePerKg),
+          weight: String(item.grams),
+          cost: String(item.cost)
+        };
+        lastEdited = "weight";
+        render();
+        setView("calculation");
+        showToast(t("editPrompt"));
+      }
+
+      function startNewItem(bill) {
+        activeBillId = bill.id;
+        editingItem = null;
+        returnToHistoryAfterEdit = false;
+        historyFocusBillId = bill.id;
+        justCompletedBillView = false;
+        fields = { price: "", weight: "", cost: "" };
+        normalAmountInput = "";
+        lastEdited = null;
+        render();
+        setView("calculation");
+        showToast(t("newSavedBill", { total: money.format(itemTotal(bill)) }));
+      }
+
+      function returnToNewCustomer() {
+        if (activeBillId && activeBillId !== currentBill.id) {
+          activeBillId = null;
+          editingItem = null;
+          returnToHistoryAfterEdit = false;
+          fields = { price: "", weight: "", cost: "" };
+          normalAmountInput = "";
+          lastEdited = null;
+          render();
+        }
+        historyFocusBillId = null;
+        expandedHistoryBillId = null;
+        justCompletedBillView = false;
+        setView("calculation");
+      }
+
+      function startNewCustomer() {
+        currentBill = newBill();
+        activeBillId = null;
+        editingItem = null;
+        returnToHistoryAfterEdit = false;
+        historyFocusBillId = null;
+        expandedHistoryBillId = null;
+        justCompletedBillView = false;
+        fields = { price: "", weight: "", cost: "" };
+        normalAmountInput = "";
+        lastEdited = null;
+        persist();
+        render();
+        setView("calculation");
+        showToast(t("newCustomerStarted"));
+      }
+
+      function showToast(message) {
+        els.toast.textContent = message;
+        els.toast.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { els.toast.hidden = true; }, 1900);
+      }
+
+      function askConfirm(title, message, buttonLabel, action) {
+        els.confirmTitle.textContent = title;
+        els.confirmMessage.textContent = message;
+        els.acceptConfirm.textContent = buttonLabel;
+        pendingConfirmAction = action;
+        els.confirmOverlay.hidden = false;
+        els.acceptConfirm.focus({ preventScroll: true });
+      }
+
+      function closeConfirm(accepted) {
+        els.confirmOverlay.hidden = true;
+        const action = pendingConfirmAction;
+        pendingConfirmAction = null;
+        if (accepted && action) action();
+      }
+
+      function openKeypad(field) {
+        activeField = field;
+        replaceOnNextDigit = true;
+        els.keypadLabel.textContent = t(field);
+        els.keypadValue.textContent = activeInputValue() || "0";
+        els.keypadOverlay.hidden = false;
+        const firstKey = els.keypadOverlay.querySelector('[data-key="1"]');
+        if (firstKey) firstKey.focus({ preventScroll: true });
+      }
+
+      function activeInputValue() {
+        return activeField === "normalAmount" ? normalAmountInput : fields[activeField] || "";
+      }
+
+      function closeKeypad() {
+        els.keypadOverlay.hidden = true;
+        activeField = null;
+        replaceOnNextDigit = false;
+      }
+
+      function updateActiveField(nextValue) {
+        if (!activeField) return;
+        if (activeField === "normalAmount") {
+          normalAmountInput = nextValue;
+          renderFields();
+          renderNormalCalculation(getActiveBill());
+          return;
+        }
+        fields[activeField] = nextValue;
+        if (activeField === "weight") {
+          lastEdited = "weight";
+          calculateFromWeight();
+        } else if (activeField === "cost") {
+          lastEdited = "cost";
+          calculateFromCost();
+        } else {
+          recalculate();
+        }
+        renderFields();
+      }
+
+      function pressKey(key) {
+        if (!activeField) return;
+        let value = activeInputValue();
+        if (key === "AC") {
+          replaceOnNextDigit = false;
+          updateActiveField("");
+          return;
+        }
+        if (key === "BACK") {
+          replaceOnNextDigit = false;
+          updateActiveField(value.slice(0, -1));
+          return;
+        }
+        if (key === ".") {
+          if (replaceOnNextDigit) value = "";
+          replaceOnNextDigit = false;
+          if (!value.includes(".")) updateActiveField(value ? `${value}.` : "0.");
+          return;
+        }
+        if (!/^\d$/.test(key)) return;
+        if (replaceOnNextDigit) {
+          value = "";
+          replaceOnNextDigit = false;
+        }
+        if (value.length >= 12) return;
+        updateActiveField(value === "0" ? key : value + key);
+      }
+
+      function addItem() {
+        const price = toNumber(fields.price);
+        const grams = toNumber(fields.weight);
+        const cost = toNumber(fields.cost);
+        if (price === null || price <= 0) {
+          showToast(t("enterPrice"));
+          return;
+        }
+        if (grams === null || grams <= 0 || cost === null) {
+          showToast(t("enterWeight"));
+          return;
+        }
+        const item = {
+          grams: rounded(grams),
+          pricePerKg: rounded(price),
+          cost: rounded((price / 1000) * grams),
+          addedAt: new Date().toISOString()
+        };
+        if (editingItem) {
+          const billId = editingItem.billId;
+          const bill = findBill(billId);
+          if (!bill || !bill.items[editingItem.index]) {
+            editingItem = null;
+            showToast(t("missingItem"));
+            render();
+            return;
+          }
+          item.addedAt = bill.items[editingItem.index].addedAt || item.addedAt;
+          bill.items[editingItem.index] = item;
+          historyFocusBillId = billId;
+        } else {
+          getActiveBill().items.push(item);
+        }
+        const wasEditing = Boolean(editingItem);
+        editingItem = null;
+        fields = { price: "", weight: "", cost: "" };
+        lastEdited = null;
+        persist();
+        render();
+        if (wasEditing && returnToHistoryAfterEdit) {
+          returnToHistoryAfterEdit = false;
+          setView("history");
+          showToast(t("itemUpdated"));
+        } else {
+          showToast(wasEditing ? t("itemUpdated") : t("itemAdded"));
+        }
+      }
+
+      function addNormalAmount() {
+        const amount = toNumber(normalAmountInput);
+        if (amount === null || amount <= 0) {
+          showToast(t("enterNormalAmount"));
+          return;
+        }
+        const bill = getActiveBill();
+        if (!Array.isArray(bill.normalEntries)) bill.normalEntries = [];
+        bill.normalEntries.push({ amount: rounded(amount), addedAt: new Date().toISOString() });
+        normalAmountInput = "";
+        persist();
+        render();
+        showToast(t("normalAmountAdded"));
+      }
+
+      function completeBill() {
+        if (editingItem) {
+          showToast(t("updateBeforeComplete"));
+          return;
+        }
+        if (fields.price !== "" || fields.weight !== "" || fields.cost !== "" || normalAmountInput !== "") {
+          showToast(t("addBeforeComplete"));
+          return;
+        }
+        const bill = getActiveBill();
+        if (!billEntryCount(bill)) {
+          historyFocusBillId = null;
+          justCompletedBillView = false;
+          render();
+          setView("history");
+          return;
+        }
+        if (bill !== currentBill) {
+          historyFocusBillId = bill.id;
+          expandedHistoryBillId = bill.id;
+          justCompletedBillView = false;
+          bill.finishedAt = new Date().toISOString();
+          activeBillId = null;
+          editingItem = null;
+          returnToHistoryAfterEdit = false;
+          fields = { price: "", weight: "", cost: "" };
+          lastEdited = null;
+          persist();
+          render();
+          setView("history");
+          showToast(t("completedBillSaved"));
+          return;
+        }
+        const billToSave = {
+          ...currentBill,
+          finishedAt: new Date().toISOString(),
+          items: currentBill.items.map((item) => ({ ...item })),
+          normalEntries: (currentBill.normalEntries || []).map((entry) => ({ ...entry }))
+        };
+        savedBills.push(billToSave);
+        historyFocusBillId = billToSave.id;
+        expandedHistoryBillId = billToSave.id;
+        justCompletedBillView = true;
+        currentBill = newBill();
+        activeBillId = null;
+        editingItem = null;
+        fields = { price: "", weight: "", cost: "" };
+        normalAmountInput = "";
+        lastEdited = null;
+        persist();
+        render();
+        setView("history");
+        $("historyScroll").scrollTop = 0;
+        showToast(t("completeBill"));
+      }
+
+      function clearHistory() {
+        askConfirm(
+          t("clearHistoryTitle"),
+          t("clearHistoryMessage"),
+          t("clearHistory"),
+          () => {
+            savedBills = [];
+            activeBillId = null;
+            editingItem = null;
+            returnToHistoryAfterEdit = false;
+            historyFocusBillId = null;
+            expandedHistoryBillId = null;
+            justCompletedBillView = false;
+            persist();
+            render();
+            showToast(t("clearHistoryDone"));
+          }
+        );
+      }
+
+      document.querySelectorAll(".value-button").forEach((button) => {
+        button.addEventListener("click", () => openKeypad(button.dataset.field));
+      });
+      els.completeButton.addEventListener("click", completeBill);
+      els.languageSelect.addEventListener("change", () => {
+        currentLanguage = els.languageSelect.value === "hi" ? "hi" : "en";
+        refreshFormatters();
+        applyTranslations();
+        render();
+        persist();
+      });
+      els.historyButton.addEventListener("click", () => {
+        historyFocusBillId = null;
+        expandedHistoryBillId = null;
+        justCompletedBillView = false;
+        render();
+        setView("history");
+      });
+      els.backToCalculator.addEventListener("click", returnToNewCustomer);
+      els.newCustomerButton.addEventListener("click", startNewCustomer);
+      $("addItemButton").addEventListener("click", addItem);
+      els.addNormalAmountButton.addEventListener("click", addNormalAmount);
+      $("clearHistoryButton").addEventListener("click", clearHistory);
+      $("confirmKeypad").addEventListener("click", closeKeypad);
+      $("cancelConfirm").addEventListener("click", () => closeConfirm(false));
+      els.acceptConfirm.addEventListener("click", () => closeConfirm(true));
+      $("keyGrid").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-key]");
+        if (button) pressKey(button.dataset.key);
+      });
+      els.keypadOverlay.addEventListener("click", (event) => {
+        if (event.target === els.keypadOverlay) closeKeypad();
+      });
+      els.confirmOverlay.addEventListener("click", (event) => {
+        if (event.target === els.confirmOverlay) closeConfirm(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (!els.confirmOverlay.hidden) {
+          if (event.key === "Escape") closeConfirm(false);
+          return;
+        }
+        if (els.keypadOverlay.hidden) return;
+        if (event.key === "Escape") closeKeypad();
+        if (event.key === "Enter") closeKeypad();
+        if (event.key === "Backspace") pressKey("BACK");
+      });
+
+      loadSavedData();
+      refreshFormatters();
+      applyTranslations();
+      render();
+    })();
+  </script>
+</body>
+</html>
